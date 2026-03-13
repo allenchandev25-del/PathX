@@ -1,0 +1,5 @@
+{
+  "name": "pathX",
+  "description": "A mathematical simulator for autonomous vehicle path prediction, integrating Partial Differential Equations, Vector Spaces, Inner Product Spaces, and Laplace Transforms.",
+  "requestFramePermissions": []
+}
