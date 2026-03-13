@@ -1,7 +1,3 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # PathX: Autonomous Vehicle Path Prediction Simulator
 
 PathX is a high-fidelity mathematical simulator designed to model autonomous vehicle behavior. Developed as an academic project for Karunya University, it bridges complex kinematic models with real-time web-based visualization.
@@ -14,6 +10,22 @@ PathX is a high-fidelity mathematical simulator designed to model autonomous veh
   - 🤖 **Autonomous**: Path tracking using Pure Pursuit algorithms at 60Hz.
 - **Advanced Telemetry**: Live visualization of velocity profiles, steering vectors, and system stability.
 - **Modern UI/UX**: Premium dark-mode interface with glassmorphism and real-time data visualization.
+
+## 🛠️ Tech Stack
+
+### Core Technologies
+- **Frontend Framework**: [React 19](https://react.dev/)
+- **Programming Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Build Tool**: [Vite 6](https://vitejs.dev/)
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
+
+### Libraries & Tools
+- **Animation**: [Motion](https://motion.dev/) (Framer Motion)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **AI Engine**: [Google Gemini API](https://ai.google.dev/)
+- **Backend**: [Express](https://expressjs.com/)
+- **Database**: [Better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
+- **Utility**: [Clsx](https://github.com/lukeed/clsx), [Tailwind Merge](https://github.com/dcastil/tailwind-merge)
 
 ## 📐 Mathematical Foundation
 
