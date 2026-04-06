@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { State, predictPath, updateState, calculateSteeringToTarget, checkCollision, Obstacle } from '../math/models';
+import { State, predictPath, updateState, calculateSteeringToTarget, checkCollision, Obstacle, generateAvoidanceCurve } from '../math/models';
 
 interface SimulatorProps {
   steering: number;
@@ -27,6 +27,7 @@ const Simulator: React.FC<SimulatorProps> = ({ steering, speed, isSimulating, mo
 
   const [history, setHistory] = useState<{ x: number; y: number }[]>([]);
   const [collision, setCollision] = useState(false);
+  const [avoidanceCp, setAvoidanceCp] = useState<{ x: number; y: number } | null>(null);
 
   // Handle Canvas Click to set target
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -49,12 +50,19 @@ const Simulator: React.FC<SimulatorProps> = ({ steering, speed, isSimulating, mo
         let targetSpeed = speed;
 
         if (mode === 'autonomous' && target) {
-          currentSteering = calculateSteeringToTarget(prev, target);
+          // CO5: Curve Fitting - Generate avoidance curve
+          const { lookahead, cp } = generateAvoidanceCurve(prev, target, obstacles);
+          setAvoidanceCp(cp); // Save control point for rendering
+          
+          currentSteering = calculateSteeringToTarget(prev, lookahead);
           const dist = Math.sqrt(Math.pow(target.x - prev.x, 2) + Math.pow(target.y - prev.y, 2));
           if (dist < 20) {
             setTarget(null);
+            setAvoidanceCp(null);
             targetSpeed = 0;
           }
+        } else {
+          setAvoidanceCp(null);
         }
 
         const newState = updateState(prev, currentSteering, (targetSpeed - prev.v) * 0.5, dt);
@@ -119,6 +127,18 @@ const Simulator: React.FC<SimulatorProps> = ({ steering, speed, isSimulating, mo
         ctx.moveTo(target.x - 15, target.y); ctx.lineTo(target.x + 15, target.y);
         ctx.moveTo(target.x, target.y - 15); ctx.lineTo(target.x, target.y + 15);
         ctx.stroke();
+
+        // Draw Avoidance Curve (CO5: Curve Fitting)
+        if (mode === 'autonomous' && avoidanceCp) {
+          ctx.beginPath();
+          ctx.strokeStyle = '#f59e0b'; // Amber color for avoidance curve
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 4]);
+          ctx.moveTo(vehicleState.x, vehicleState.y);
+          ctx.quadraticCurveTo(avoidanceCp.x, avoidanceCp.y, target.x, target.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
       }
 
       // Draw History

@@ -95,6 +95,70 @@ export interface Obstacle {
 }
 
 /**
+ * CO5: Curve Fitting - Dynamic Obstacle Avoidance
+ * Uses Quadratic Bezier curves to fit a smooth, collision-free path 
+ * around obstacles towards the target.
+ */
+export function generateAvoidanceCurve(
+  state: State,
+  target: { x: number; y: number },
+  obstacles: Obstacle[]
+) {
+  // 1. Base control point is halfway to the target
+  let cp = {
+    x: (state.x + target.x) / 2,
+    y: (state.y + target.y) / 2
+  };
+
+  // 2. Check for obstacles near the direct path and push the control point away
+  for (const obs of obstacles) {
+    const dx = target.x - state.x;
+    const dy = target.y - state.y;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    if (length === 0) continue;
+
+    const ox = obs.x - state.x;
+    const oy = obs.y - state.y;
+
+    // Project obstacle onto the path
+    const tProj = Math.max(0, Math.min(1, (ox * dx + oy * dy) / (length * length)));
+    const projX = state.x + tProj * dx;
+    const projY = state.y + tProj * dy;
+
+    // Distance from obstacle to the direct path
+    const distToPath = Math.sqrt(Math.pow(obs.x - projX, 2) + Math.pow(obs.y - projY, 2));
+
+    // If obstacle is dangerously close to the path, push the control point
+    const safeDistance = obs.radius + 60; // Safety margin
+    if (distToPath < safeDistance) {
+      // Determine which side of the path the obstacle is on using cross product
+      const crossProduct = dx * oy - dy * ox;
+      const pushDir = crossProduct > 0 ? -1 : 1; // Push left or right
+
+      // Perpendicular vector to the path
+      const perpX = -dy / length;
+      const perpY = dx / length;
+
+      // Push the control point to bend the curve around the obstacle
+      const pushAmount = safeDistance - distToPath + 80;
+      cp.x += perpX * pushAmount * pushDir;
+      cp.y += perpY * pushAmount * pushDir;
+    }
+  }
+
+  // 3. Evaluate quadratic Bezier curve at t = 0.15 for the lookahead point
+  // B(t) = (1-t)^2 P0 + 2(1-t)t P1 + t^2 P2
+  const t = 0.15;
+  const invT = 1 - t;
+  const lookahead = {
+    x: invT * invT * state.x + 2 * invT * t * cp.x + t * t * target.x,
+    y: invT * invT * state.y + 2 * invT * t * cp.y + t * t * target.y
+  };
+
+  return { lookahead, cp };
+}
+
+/**
  * CO3: Probability - Simple Collision Check
  */
 export function checkCollision(state: State, obstacles: Obstacle[]): boolean {

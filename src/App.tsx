@@ -46,6 +46,12 @@ const MATH_CONCEPTS = [
     title: 'Laplace Transform',
     desc: 'Analyzing control system stability and transient response in the frequency domain for smooth steering.',
     icon: <Zap className="w-4 h-4" />
+  },
+  {
+    id: 'CO5',
+    title: 'Curve Fitting',
+    desc: 'Dynamically generating collision-free avoidance paths around obstacles using Quadratic Bezier curves.',
+    icon: <LineChart className="w-4 h-4" />
   }
 ];
 
@@ -319,7 +325,8 @@ export default function App() {
                   { title: "PDE Modeling", desc: "Continuous state change modeling for smooth trajectories." },
                   { title: "Vector Spaces", desc: "State-space representation of vehicle kinematics." },
                   { title: "Inner Products", desc: "Euclidean distance metrics for obstacle avoidance." },
-                  { title: "Laplace Control", desc: "Frequency-domain analysis for steering stability." }
+                  { title: "Laplace Control", desc: "Frequency-domain analysis for steering stability." },
+                  { title: "Curve Fitting", desc: "Bezier curve generation for dynamic obstacle avoidance." }
                 ].map((item, i) => (
                   <div key={i} className="flex gap-4 p-4 rounded-2xl bg-slate-900/50 border border-slate-800">
                     <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-blue-600/20 flex items-center justify-center text-blue-500 text-xs font-black">
