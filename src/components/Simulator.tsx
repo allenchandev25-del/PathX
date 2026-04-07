@@ -1,15 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { State, predictPath, updateState, calculateSteeringToTarget, checkCollision, Obstacle, generateAvoidanceCurve } from '../math/models';
+import { State, predictPath, updateState, calculateSteeringToTarget, checkCollision, Obstacle, generateAvoidanceCurve, simulateLidar } from '../math/models';
 
 interface SimulatorProps {
   steering: number;
   speed: number;
   isSimulating: boolean;
   mode: 'manual' | 'autonomous';
+  weather?: 'clear' | 'rain';
   onTelemetryUpdate?: (state: State) => void;
 }
 
-const Simulator: React.FC<SimulatorProps> = ({ steering, speed, isSimulating, mode, onTelemetryUpdate }) => {
+const Simulator: React.FC<SimulatorProps> = ({ steering, speed, isSimulating, mode, weather = 'clear', onTelemetryUpdate }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [vehicleState, setVehicleState] = useState<State>({
     x: 150,
@@ -23,11 +24,21 @@ const Simulator: React.FC<SimulatorProps> = ({ steering, speed, isSimulating, mo
     { x: 400, y: 200, radius: 30 },
     { x: 700, y: 450, radius: 40 },
     { x: 900, y: 150, radius: 25 },
+    { x: 250, y: 500, radius: 35 },
+    { x: 600, y: 100, radius: 20 },
   ]);
 
   const [history, setHistory] = useState<{ x: number; y: number }[]>([]);
   const [collision, setCollision] = useState(false);
   const [avoidanceCp, setAvoidanceCp] = useState<{ x: number; y: number } | null>(null);
+  
+  // Weather particles
+  const [particles] = useState(Array.from({ length: 100 }, () => ({
+    x: Math.random() * 1200,
+    y: Math.random() * 600,
+    speed: 5 + Math.random() * 10,
+    length: 10 + Math.random() * 20
+  })));
 
   // Handle Canvas Click to set target
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -101,6 +112,23 @@ const Simulator: React.FC<SimulatorProps> = ({ steering, speed, isSimulating, mo
         ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
       }
 
+      // Update and Draw Weather (Rain)
+      if (weather === 'rain') {
+        ctx.strokeStyle = '#3b82f644';
+        ctx.lineWidth = 1;
+        particles.forEach(p => {
+          p.x -= p.speed * 0.5;
+          p.y += p.speed;
+          if (p.y > canvas.height) { p.y = 0; p.x = Math.random() * canvas.width; }
+          if (p.x < 0) { p.x = canvas.width; }
+          
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x - p.speed * 0.5, p.y + p.length);
+          ctx.stroke();
+        });
+      }
+
       // Draw Obstacles
       obstacles.forEach(obs => {
         const grad = ctx.createRadialGradient(obs.x, obs.y, 0, obs.x, obs.y, obs.radius);
@@ -166,11 +194,24 @@ const Simulator: React.FC<SimulatorProps> = ({ steering, speed, isSimulating, mo
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Draw Sensors (Radar Arcs)
-      ctx.beginPath();
-      ctx.strokeStyle = '#3b82f622';
-      ctx.arc(vehicleState.x, vehicleState.y, 100, vehicleState.yaw - 0.5, vehicleState.yaw + 0.5);
-      ctx.stroke();
+      // Draw LIDAR Rays
+      const lidarPoints = simulateLidar(vehicleState, obstacles);
+      ctx.lineWidth = 1;
+      lidarPoints.forEach(pt => {
+        ctx.beginPath();
+        // Red if hit obstacle, blue if max range
+        ctx.strokeStyle = pt.distance < 199 ? '#ef444466' : '#3b82f622';
+        ctx.moveTo(vehicleState.x, vehicleState.y);
+        ctx.lineTo(pt.x, pt.y);
+        ctx.stroke();
+        
+        if (pt.distance < 199) {
+          ctx.beginPath();
+          ctx.fillStyle = '#ef4444';
+          ctx.arc(pt.x, pt.y, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
 
       // Draw Vehicle
       ctx.save();
@@ -210,7 +251,7 @@ const Simulator: React.FC<SimulatorProps> = ({ steering, speed, isSimulating, mo
 
     const animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
-  }, [vehicleState, history, steering, target, obstacles, collision, mode]);
+  }, [vehicleState, history, steering, target, obstacles, collision, mode, particles]);
 
   return (
     <div className="relative w-full h-[600px] bg-[#0f172a] rounded-3xl border border-slate-800 overflow-hidden shadow-2xl">

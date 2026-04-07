@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { LineChart as RechartsLineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { 
   Car, 
   Settings, 
@@ -16,7 +17,8 @@ import {
   Navigation,
   Activity,
   Zap,
-  Layers
+  Layers,
+  CloudRain
 } from 'lucide-react';
 import Simulator from './components/Simulator';
 import { cn } from './lib/utils';
@@ -61,11 +63,18 @@ export default function App() {
   const [isSimulating, setIsSimulating] = useState(false);
   const [mode, setMode] = useState<'manual' | 'autonomous'>('manual');
   const [telemetry, setTelemetry] = useState<State | null>(null);
-  const [history, setHistory] = useState<number[]>([]);
+  const [history, setHistory] = useState<{ time: string, velocity: number, steering: number }[]>([]);
+  const [weather, setWeather] = useState<'clear' | 'rain'>('clear');
 
   useEffect(() => {
     if (telemetry) {
-      setHistory(prev => [...prev.slice(-20), telemetry.v]);
+      const now = new Date();
+      const timeStr = `${now.getSeconds()}.${now.getMilliseconds()}`;
+      setHistory(prev => [...prev.slice(-30), { 
+        time: timeStr, 
+        velocity: Number(telemetry.v.toFixed(2)),
+        steering: Number((telemetry.yaw * 180 / Math.PI).toFixed(1))
+      }]);
     }
   }, [telemetry]);
 
@@ -151,6 +160,7 @@ export default function App() {
                   speed={speed} 
                   isSimulating={isSimulating} 
                   mode={mode}
+                  weather={weather}
                   onTelemetryUpdate={setTelemetry}
                 />
               </div>
@@ -238,15 +248,33 @@ export default function App() {
                 )}
 
                 <div className="pt-8 border-t border-slate-800">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-600 mb-6">Velocity Profile</h4>
-                  <div className="h-24 flex items-end gap-1 px-2">
-                    {history.map((v, i) => (
-                      <div 
-                        key={i} 
-                        className="flex-1 bg-blue-500/40 rounded-t-sm transition-all duration-500" 
-                        style={{ height: `${Math.min(100, v)}%` }}
-                      />
-                    ))}
+                  <div className="flex justify-between items-center mb-6">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-600">Live Telemetry</h4>
+                    <button 
+                      onClick={() => setWeather(w => w === 'clear' ? 'rain' : 'clear')}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all",
+                        weather === 'rain' ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
+                      )}
+                    >
+                      <CloudRain className="w-3 h-3" />
+                      {weather === 'rain' ? 'Rain ON' : 'Rain OFF'}
+                    </button>
+                  </div>
+                  <div className="h-40 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsLineChart data={history}>
+                        <XAxis dataKey="time" hide />
+                        <YAxis yAxisId="left" domain={[0, 100]} hide />
+                        <YAxis yAxisId="right" orientation="right" domain={[-45, 45]} hide />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '12px' }}
+                          itemStyle={{ fontWeight: 'bold' }}
+                        />
+                        <Line yAxisId="left" type="monotone" dataKey="velocity" stroke="#3b82f6" strokeWidth={2} dot={false} name="Velocity (m/s)" />
+                        <Line yAxisId="right" type="monotone" dataKey="steering" stroke="#10b981" strokeWidth={2} dot={false} name="Steering (°)" />
+                      </RechartsLineChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
               </div>

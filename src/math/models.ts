@@ -161,6 +161,57 @@ export function generateAvoidanceCurve(
 /**
  * CO3: Probability - Simple Collision Check
  */
+export interface LidarPoint {
+  x: number;
+  y: number;
+  distance: number;
+}
+
+/**
+ * Simulates a 2D LIDAR sensor using raycasting against obstacles.
+ */
+export function simulateLidar(state: State, obstacles: Obstacle[], numRays: number = 30, maxRange: number = 200): LidarPoint[] {
+  const points: LidarPoint[] = [];
+  const startAngle = -Math.PI / 2; // -90 deg
+  const endAngle = Math.PI / 2;    // +90 deg
+  
+  for (let i = 0; i < numRays; i++) {
+    const angle = startAngle + (endAngle - startAngle) * (i / (numRays - 1));
+    const rayYaw = state.yaw + angle;
+    const dx = Math.cos(rayYaw);
+    const dy = Math.sin(rayYaw);
+    
+    let hitDistance = maxRange;
+    
+    for (const obs of obstacles) {
+      const ox = obs.x - state.x;
+      const oy = obs.y - state.y;
+      const proj = ox * dx + oy * dy;
+      
+      if (proj > 0 && proj < maxRange) {
+        const px = state.x + proj * dx;
+        const py = state.y + proj * dy;
+        const distToRay = Math.sqrt(Math.pow(obs.x - px, 2) + Math.pow(obs.y - py, 2));
+        
+        if (distToRay < obs.radius) {
+          const hitDist = proj - Math.sqrt(obs.radius * obs.radius - distToRay * distToRay);
+          if (hitDist < hitDistance) {
+            hitDistance = hitDist;
+          }
+        }
+      }
+    }
+    
+    points.push({
+      x: state.x + hitDistance * dx,
+      y: state.y + hitDistance * dy,
+      distance: hitDistance
+    });
+  }
+  
+  return points;
+}
+
 export function checkCollision(state: State, obstacles: Obstacle[]): boolean {
   for (const obs of obstacles) {
     const dx = state.x - obs.x;
